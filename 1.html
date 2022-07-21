@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Document</title>
+</head>
+
+<body>
+    <input type="button" name="" id="btn" value="添加" />
+    <ul id="ul1">
+        <li>item 1</li>
+        <li>item 2</li>
+        <li>item 3</li>
+        <li>item 4</li>
+    </ul>
+    <script>
+        const oBtn = document.getElementById("btn");
+        const oUl = document.getElementById("ul1");
+        let num = 4;
+
+        //事件委托，添加的子元素也有事件
+        oUl.onclick = function(ev) {
+            ev = ev || window.event;
+            const target = ev.target || ev.srcElement;
+            if (target.nodeName.toLowerCase() == 'li') {
+                console.log('the content is: ', target.innerHTML);
+            }
+
+        };
+
+        //添加新节点
+        oBtn.onclick = function() {
+            num++;
+            const oLi = document.createElement('li');
+            oLi.innerHTML = `item ${num}`;
+            oUl.appendChild(oLi);
+        };
+        /**事件委托的优点：
+        (1)节省内存，提高性能
+        (2)动态绑定，减少重复工作
+        局限性：(1) 没有冒泡机制的元素无法进行事件委托：focus，blur
+                (2) 有冒泡机制的元素有时候不适合事件委托：mousemove，mouseout
+        **/
+    </script>
+</body>
+
+</html>
