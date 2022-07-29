@@ -30,3 +30,14 @@
   npm install
 6.启动项目
   npm run dev
+按钮权限
+两种解决办法:1.定义一个全局方法,配合v-if实现;2.使用自定义指令
+1.定义一个全局方法,配合v-if实现;
+在用户登录成功后,获取用户的按钮权限(数组格式),存储到store中
+定义公共函数hasPermission，在main.js中引入,在需要的按钮上使用即可
+2.自定义指令：directives 在全局main.js中注册，
+/*然后在main.js文件引入文件*/
+importhas from'./public/js/btnPermissions.js';
+/*页面中按钮只需加v-has即可*/
+<el-button @click='editClick' type="primary" v-has>编辑</el-button>
+注意：自定义指令时如果使用bind：如果按钮权限不存在，删除按钮语句el.parentNode.removeChild(el)报错，因为el.parentNode为null，页面未渲染完成，解决方法：把bind改成inserted/ update /componentUpdated 就解决了
