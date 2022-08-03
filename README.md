@@ -63,9 +63,48 @@ const has = Vue.directive('has',{})
 Vue.prototype.$_has = function(value){}
 //暴露指令
 export {has};
-```
 /*然后在main.js文件引入文件*/
 import has from'./public/js/btnPermissions.js';
 /*页面中按钮只需加v-has即可*/
 <el-button @click='editClick' type="primary" v-has>编辑</el-button>
+```
 > 注意：自定义指令时如果使用bind：如果按钮权限不存在，删除按钮语句el.parentNode.removeChild(el)报错，因为el.parentNode为null，页面未渲染完成，解决方法：把bind改成inserted/ update /componentUpdated 就解决了
+# 接口权限
+一般使用jwt验证接口权限，登录后拿到token，并将token保存起来，再使用axios拦截器进行拦截，每次请求时头部携带token，如果没有则返回401，跳转到登录页面重新登录。
+```js
+  axios.interceptors.request.use(config => {
+    config.headers['token'] = cookie.get('token')
+    return config
+  })
+  axios.interceptors.response.use(res=>{},{response}=>{
+    if (response.data.code === 40099 || response.data.code === 40098) { //token过期或者错误
+        router.push('/login')
+    }
+  })
+```
+# 路由权限验证
+## 1.通过router.beforeEach() 路由拦截的方式实现。
+这种方式依赖于我们项目的路由表都是事先配置好的
+![image](https://user-images.githubusercontent.com/46916809/182597119-676651be-c6a9-44fd-9fc0-a214043783b3.png)
+在 router/index 中，通过router.beforeEach() 路由拦截去进行权限判断
+```js
+router.beforeEach((to, from, next) => {
+    //to: 从哪个路由来
+    //from: 去哪个路由
+    //next：是一个方法，使用路由拦截，必须在后面添加next()，否则路由无法跳转
+    //假设我们从后台获取的权限为：
+    const list = ['index1', 'index2'];
+    //如果没有匹配到，证明没有权限
+    if(list.indexOf(to.name) === -1) {
+        next('/login');
+        ... //或者执行其他操作
+    }
+})
+```
+## 2.通过vue-router 官方提供的addRoutes()来进行动态路由注入，该方法只有vue-router的版本 >= 2.2才有效。
+初始化的时候先挂载不需要权限控制的路由，比如登录页，404等错误页。如果用户通过URL进行强制访问，则会直接进入404，相当于从源头上做了控制
+> 登录后，获取用户的权限信息，然后筛选有权限访问的路由，在全局路由守卫里进行调用addRoutes添加路由。
+```js
+  // permission judge function
+  
+```
