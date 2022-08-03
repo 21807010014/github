@@ -84,8 +84,28 @@ import has from'./public/js/btnPermissions.js';
 ```
 # 路由权限验证
 ## 1.通过router.beforeEach() 路由拦截的方式实现。
-这种方式依赖于我们项目的路由表都是事先配置好的
-![image](https://user-images.githubusercontent.com/46916809/182597119-676651be-c6a9-44fd-9fc0-a214043783b3.png)
+这种方式依赖于我们项目的路由表都是事先配置好的:
+```js
+const router = new Router({
+  routes: [{
+        path: '/',
+        redirect: '/index1'
+    }, {
+        path: '/index1',
+        name: 'Index1',
+        component: Index1
+    }, {
+        path: '/index2',
+        name: 'Index2',
+        component: Index2
+    }, {
+        path: '/index3',
+        name: 'Index3',
+        component: Index3
+    }]
+})
+export default router;
+```
 在 router/index 中，通过router.beforeEach() 路由拦截去进行权限判断
 ```js
 router.beforeEach((to, from, next) => {
