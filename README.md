@@ -37,7 +37,7 @@
   npm run dev
 # 按钮权限
 两种解决办法:1.定义一个全局方法,配合v-if实现;2.使用自定义指令
-## 1.定义一个全局方法,配合v-if实现;
+## 1.定义一个全局方法,配合v-if实现
 在用户登录成功后,获取用户的按钮权限(数组格式),存储到store中
 定义公共函数hasPermission
 ```js
@@ -125,6 +125,190 @@ router.beforeEach((to, from, next) => {
 初始化的时候先挂载不需要权限控制的路由，比如登录页，404等错误页。如果用户通过URL进行强制访问，则会直接进入404，相当于从源头上做了控制
 > 登录后，获取用户的权限信息，然后筛选有权限访问的路由，在全局路由守卫里进行调用addRoutes添加路由。
 ```js
+const createRouter = () => new Router({
+    // mode: 'history', // require service support
+    scrollBehavior: () => ({ y: 0 }),
+    routes: constantRoutes
+});
+
+const router = createRouter();
+/** 然后我们访问A帐号有，B帐号没有的路由时,
+重新实例化一个新的路由表，替换之前的路由表，然后将这个方法导出
+重新拷贝固定路由，matcher 清除addRoutes添加的路由，不刷新的情况下，登录时初始化路由
+*/
+export function resetRouter() {
+    const newRouter = createRouter();
+    router.matcher = newRouter.matcher; // the relevant part
+}
   // permission judge function
-  
+  function hasPermission(roles, permissionRoles) {
+    if (roles.indexOf("admin") >= 0) return true; // admin permission passed directly
+    if (!permissionRoles) return true;
+    //判断动态路由中的meta中是否包含你当前用户的权限
+    return roles.some(role => permissionRoles.indexOf(role) >= 0);
+}
+const whiteList = ["/login", "/authredirect"];
+
+router.beforeEach((to, from, next) => {
+    NProgress.start(); // start progress bar
+    let token = sessionStorage.getItem("token");
+    console.log({})
+    if (token) {
+        // determine if there has token
+        /* has token*/
+        if (to.path === "/login") {
+            // next();
+            //next({ path: '/' }) 会导致栈溢出?
+            next({ path: '/login' })
+            NProgress.done(); // if current page is dashboard will not trigger	afterEach hook, so manually handle it
+        } else {
+            if (store.getters.roles.length === 0) {
+                // 先请求获取用户信息
+                store.dispatch("getUserInfo").then(res => {
+                    // 获取用户角色 note: roles must be a array! such as: ['editor','develop']
+                    // const roles = res.data.roles;
+                    const roles = res;
+                    // 根据roles权限生成可访问的路由表
+                    store.dispatch("generateRoutes", roles).then(() => {
+                        // 动态添加可访问路由表,注意:保持命名一致,否则store.getters.addRoutes为undefined
+                        // 清除动态路由,解决刷新页面路由重复
+                        resetRouter();
+                        router.addRoutes(store.getters.addRoutes);
+                        next({...to, replace: true }); // hack方法 确保addRoutes已完成 ,
+                    });
+                }).catch(err => {
+                    // store.dispatch("resetToken")
+                    // Message.error(err || "Verification failed, please login again");
+                    // next({ path: "/" });
+                    store.dispatch("resetToken").then(() => {
+                        Message.error(err || "Verification failed, please login again");
+                        next({ path: "/" });
+                    });
+                });
+            } else {
+                // 没有动态改变权限的需求可直接next() 删除下方权限判断
+                if (hasPermission(store.getters.roles, to.meta.roles)) {
+                    next(); //
+                } else {
+                    next({ path: "/401", replace: true, query: { noGoBack: true } });
+                }
+                // 可删
+            }
+        }
+    } else {
+        /* has no token*/
+        if (whiteList.indexOf(to.path) !== -1) {
+            // 在免登录白名单，直接进入
+            next();
+        } else {
+            next("/login"); // 否则全部重定向到登录页
+            NProgress.done(); // if current page is login will not trigger afterEach hook, so manually handle it
+        }
+    }
+});
 ```
+### 问题一：vue路由跳转错误：Error: Redirected when going from "/login" to "/home" via a navigation guard.第一次点击登陆出现错误，第二次点击登陆正常进入主页
+> 原因：先触发了守卫路由，然后再放置token，导致路由守卫中获取不到token就进行'/login'跳转
+ 解决方法：把push路由的方法放到存储token信息以后即可。
+### 问题二：栈溢出
+> 原因：命名错误，导致变量为undefined
+# 菜单权限
+## 1. 登录的时候后端就返回菜单，进到主界面的时候就进行了渲染
+```js
+/* 动态路由 */
+export const asyncRoutes = [
+  {
+    path: "*",
+    component: () => import('@/views/error-page/404'),
+  }
+]
+/* 使用钩子函数对路由进行权限跳转 */
+try {
+    store.dispatch('user/getInfo').then(() => { // 拉取info
+        store.dispatch('permission/generateRoutes').then(res => { // 生成可访问的路由表
+            router.addRoutes(res) // 动态添加可访问路由表
+            const redirect = decodeURIComponent(from.query.redirect || to.path)
+            next({...to, replace: true })
+        })
+    }).catch(err => {
+        console.log(err);
+    })
+}
+/* 请求后台获取菜单，解析后加入到动态路由 */
+const state = {
+  routes: [],
+  addRoutes: [],
+  btnRoles: []
+}
+getters: {
+  roles: state => state.roles,
+  addRoutes: state => state.addRoutes
+  permission_routes: state => state.routes
+},
+const mutations = {
+  SET_ROUTES: (state, routes) => {
+    state.addRoutes = routes
+    state.routes = constantRoutes.concat(routes)
+  },
+}
+
+/**
+ * 由data生成权限菜单
+ * @routes AsyncRoutes
+ * @data  后端请求的菜单列表
+ */
+ export function generaMenu(routes, data) {
+    data.forEach(item => {
+        const menu = {
+            path: item.url,
+            children: [],
+            name: item.name,
+            isShow: true,
+            meta: { title: item.name, keepAlive: true }
+        }
+        if (item.url.indexOf("token") >= 0) {
+            menu.path = item.url + getToken()
+        }
+        if (item.component != null && item.component !== '') {
+            menu.component = item.component === 'Layout' ? Layout : resolve => require([`@/views${item.component}`],             resolve)
+        }
+        if (item.redirect != null && item.redirect !== '') {
+            menu.redirect = item.redirect
+        }
+        if (item.icon != null && item.icon !== '') {
+            menu.meta.icon = item.icon
+        } else {
+            menu.meta.icon = 'task'
+        }
+        if (item.component === 'Layout') {
+            generaMenu(menu.children, item.childList)
+        }
+        routes.push(menu)
+    })
+}
+
+const actions = {
+    generateRoutes({ commit }) {
+        return new Promise(resolve => {
+            getUserMenu().then(response => {
+                let asyncBtns = []
+                let menuArr = response.data.object.menuList
+                let btnArr = response.data.object.btnList
+                generaMenu(asyncRoutes, menuArr)
+                console.log(asyncRoutes)
+                commit('SET_ROUTES', asyncRoutes)
+                resolve(asyncRoutes)
+            })
+        })
+    }
+}
+根据store的路由数据，渲染菜单
+import { mapGetters } from 'vuex'
+computed: {
+    ...mapGetters([
+        'permission_routes',
+        'sidebar'
+    ]),
+}
+```
+ 
