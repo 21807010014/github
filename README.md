@@ -32,9 +32,10 @@
   vue init webpack my-project
   ```
 # 5.安装工程依赖模块
-  npm install
+  >npm install
 # 6.启动项目
-  npm run dev
+  >npm run dev
+
 # 按钮权限
 两种解决办法:1.定义一个全局方法,配合v-if实现;2.使用自定义指令
 ## 1.定义一个全局方法,配合v-if实现
@@ -69,6 +70,7 @@ import has from'./public/js/btnPermissions.js';
 <el-button @click='editClick' type="primary" v-has>编辑</el-button>
 ```
 > 注意：自定义指令时如果使用bind：如果按钮权限不存在，删除按钮语句el.parentNode.removeChild(el)报错，因为el.parentNode为null，页面未渲染完成，解决方法：把bind改成inserted/ update /componentUpdated 就解决了
+
 # 接口权限
 一般使用jwt验证接口权限，登录后拿到token，并将token保存起来，再使用axios拦截器进行拦截，每次请求时头部携带token，如果没有则返回401，跳转到登录页面重新登录。
 ```js
@@ -82,7 +84,8 @@ import has from'./public/js/btnPermissions.js';
     }
   })
 ```
-# 路由权限验证
+
+# 路由权限
 ## 1.通过router.beforeEach() 路由拦截的方式实现。
 这种方式依赖于我们项目的路由表都是事先配置好的:
 ```js
@@ -212,6 +215,7 @@ router.beforeEach((to, from, next) => {
  解决方法：把push路由的方法放到存储token信息以后即可。
 ### 问题二：栈溢出
 > 原因：命名错误，导致变量为undefined
+
 # 菜单权限
 ## 1. 登录的时候后端就返回菜单，进到主界面的时候就进行了渲染
 ```js
@@ -313,10 +317,11 @@ computed: {
 
 # TS
 ## 安装
->全局安装：npm install -g typescript
->全局安装ts编译器: cnpm install -g ts-node
->全局安装npm install -g @types/node，否则报错TSError: ⨯ Unable to compile TypeScript:
->vscode安装coderunner插件，进入 ts 文件，右键 Run Code ，即可输出结果
+### 全局安装：npm install -g typescript
+### 全局安装ts编译器: cnpm install -g ts-node
+### 全局安装npm install -g @types/node
+否则报错TSError: ⨯ Unable to compile TypeScript:
+### vscode安装coderunner插件，进入 ts 文件，右键 Run Code ，即可输出结果
 ## TS转换为JS
 >tsc xxx.ts
 
