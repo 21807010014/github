@@ -320,8 +320,8 @@ computed: {
 ### 全局安装：npm install -g typescript
 ### 全局安装ts编译器: cnpm install -g ts-node
 ### 全局安装npm install -g @types/node
-否则报错TSError: ⨯ Unable to compile TypeScript:
+> 否则报错TSError: ⨯ Unable to compile TypeScript:
 ### vscode安装coderunner插件，进入 ts 文件，右键 Run Code ，即可输出结果
 ## TS转换为JS
->tsc xxx.ts
+> tsc xxx.ts
 
